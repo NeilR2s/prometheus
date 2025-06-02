@@ -1,7 +1,7 @@
 from collections import Counter
 import jax
 import jax.numpy as jnp
-from utils.distances import manhattan_distance, euclidean_distance, minkowski_distance
+from prometheus.utils.distances import manhattan_distance, euclidean_distance, minkowski_distance
 
 # TODO : Implement a label encoder 
 
@@ -14,10 +14,10 @@ class KNN_Classifier:
     3. Get label with majority vote
 
     Args:
-        - k (int): The number of nearest neighbors to consider for classification.
+        - k (int): The number of nearest neighbors to consider for classification. Default is 3.
         - X_train (jnp.ndarray): The training data features, stored after calling fit().
         - y_train (jnp.ndarray): The training data labels, stored after calling fit().
-        - distance_metric (callable): The function used to calculate distances between points.
+        - distance_metric (callable): The function used to calculate distances between points. Options are euclidean, minkowski, manhattan, but default is euclidean.
     """
     def __init__(self, k: int = 3, distance_metric: str = "euclidean", minkowski_q: int = 2):
         """
@@ -31,7 +31,7 @@ class KNN_Classifier:
         Raises:
             - ValueError: If an unsupported distance_metric is provided or if minkowski_q is invalid for 'minkowski' distance.
         """
-        if k >= 0:
+        if k <= 0:
             raise ValueError("k must be a positive integer")
 
         if distance_metric == "euclidean":
@@ -71,7 +71,7 @@ class KNN_Classifier:
         if self.k > X_train_len:
             raise ValueError("k must not be greater than the number of training samples")
 
-    def predict(self, X_test: jnp.ndarray) -> list:
+    def predict(self, X_test: jnp.ndarray) -> jnp.array:
         """
         Args:
             X_test (array-like): Test data features - 2D array-like structure where rows are samples and columns are features.
@@ -83,7 +83,7 @@ class KNN_Classifier:
             ValueError: If the model has not been fitted yet 
         
         """
-        if not self.X_train or not self.y_train:
+        if self.X_train == None or self.y_train == None:
             raise ValueError("the KNN model must be fit with data before predicting")
 
         X_test = jnp.asarray(X_test)
@@ -95,10 +95,10 @@ class KNN_Classifier:
         if X_train_features != X_test_features:
             raise ValueError(f"the KNN model was trained on {X_train_features} but the testing data has {X_test_features}") 
 
-        predictions = [self._predict(x_test_sample) for X_test_sample in X_test]
+        predictions = jnp.asarray([self._predict(X_test_sample) for X_test_sample in X_test])
         return predictions
 
-    def _predict(self, x_test_sample: jnp.ndarray):
+    def _predict(self, x_test_sample: jnp.ndarray) -> jnp.array:
         """
         Predicts the class label for a single test sample.
 
@@ -108,12 +108,20 @@ class KNN_Classifier:
         Returns:
             The predicted class label for the input sample.
         """
-        distances = [self.distance_metric(x_test_sample, X_train_sample) for X_train_sample in self.X_train]
 
+        distances = jnp.asarray([self.distance_metric(x_test_sample, X_train_sample) for X_train_sample in self.X_train])
+        # print(f"distances: \n{distances}")
         top_k_indices = jnp.argsort(distances)[:self.k]
+        # print(f"top_k_indices: \n{top_k_indices}")
+        top_k_labels = jnp.asarray([self.y_train[i] for i in top_k_indices])
+        # print(f"top k labels: \n{top_k_labels}")
 
-        top_k_labels = [self.y_train[i] for i in top_k_indices]
+        # MAJORITY VOTE, NOT GREEDY SELECTION
+        unique_labels, counts = jnp.unique(top_k_labels, return_counts=True, size=top_k_labels.shape[0])
+        max_label_index = jnp.argmax(counts)
+        max_k_label = unique_labels[max_label_index]
+        # print(f"knn: {max_k_label}")
+        
 
-        k_nearest_neighbors = Counter(top_k_labels).most_common(1)[0][0]
 
-        return k_nearest_neighbors 
+        return max_k_label
