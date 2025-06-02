@@ -4,13 +4,13 @@ from prometheus.utils.distances import manhattan_distance, euclidean_distance, m
 
 # TODO : Implement a label encoder 
 
-class KNN_Classifier:
+class KNN_Regression:
     """
-    A K-Nearest Neighbors (KNN) classifier implemented using JAX.
+    A K-Nearest Neighbors (KNN) regressor implemented using JAX.
 
     1. Calculate distance from all datapoints in the dataset
     2. Get closest K points
-    3. Get label with majority vote
+    3. Get average of K points
 
     Args:
         - k (int): The number of nearest neighbors to consider for classification. Default is 3.
@@ -30,19 +30,20 @@ class KNN_Classifier:
         Raises:
             - ValueError: If an unsupported distance_metric is provided or if minkowski_q is invalid for 'minkowski' distance.
         """
-        if k <= 0:
-            raise ValueError("k must be a positive integer")
-
         self.k = k
         self.X_train = None
         self.y_train = None
-        self.minkowski_q = minkowski_q
+        
+        if k <= 0:
+            raise ValueError("k must be a positive integer")
+
         if distance_metric == "euclidean":
             self.distance_metric = euclidean_distance
         elif distance_metric == "manhattan":
             self.distance_metric = manhattan_distance
         elif distance_metric ==  "minkowski":
-            self.distance_metric = lambda x_array_like, y_array_like: minkowski_distance(x=x_array_like, y=y_array_like, q=int(self.minkowski_q))
+            self.distance_metric = lambda minkowski_distance: minkowski_distance(q=minkowski_q)
+
         else:
             raise ValueError(f"unsupported distance metric {distance_metric}, please choose between euclidean, manhattan, or minkowski")
 
@@ -64,7 +65,7 @@ class KNN_Classifier:
         y_train_len = self.y_train.shape[0]
 
         if self.X_train.ndim == 1:
-            self.X_train = self.X_train.reshape(-1,1)
+            self.X_train.reshape(-1,1)
         if X_train_len != y_train_len:
             raise ValueError(f"ensure that the X and y train values are of the same length, attempted to pass ({X_train_len},{y_train_len})")
         if self.k > X_train_len:
@@ -90,13 +91,13 @@ class KNN_Classifier:
         X_test_features = X_test.shape[1]
 
         if X_test.ndim == 1:
-            X_test = X_test.reshape(1,-1)
+            X_test.reshape(1,-1)
         if X_train_features != X_test_features:
             raise ValueError(f"the KNN model was trained on {X_train_features} but the testing data has {X_test_features}") 
 
-        predictions = jax.vmap(self._predict, in_axes=0)(X_test)
+        predictions = jnp.asarray([self._predict(X_test_sample) for X_test_sample in X_test])
         return predictions
-    
+
     def _predict(self, x_test_sample: jnp.ndarray) -> jnp.array:
         """
         Predicts the class label for a single test sample.
@@ -107,20 +108,12 @@ class KNN_Classifier:
         Returns:
             The predicted class label for the input sample.
         """
-        
-        distances = jax.vmap(self.distance_metric, in_axes=(None, 0))(x_test_sample, self.X_train)
+
+        distances = jnp.asarray([self.distance_metric(x_test_sample, X_train_sample) for X_train_sample in self.X_train])
         # print(f"distances: \n{distances}")
         top_k_indices = jnp.argsort(distances)[:self.k]
         # print(f"top_k_indices: \n{top_k_indices}")
-        top_k_labels = self.y_train[top_k_indices]
+        top_k_labels = jnp.asarray([self.y_train[i] for i in top_k_indices])
         # print(f"top k labels: \n{top_k_labels}")
 
-        # MAJORITY VOTE, NOT GREEDY SELECTION
-        unique_labels, counts = jnp.unique(top_k_labels, return_counts=True, size=top_k_labels.shape[0])
-        max_label_index = jnp.argmax(counts)
-        max_k_label = unique_labels[max_label_index]
-        # print(f"knn: {max_k_label}")
-        
-
-
-        return max_k_label
+        return jnp.mean(top_k_labels)

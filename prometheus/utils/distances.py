@@ -8,7 +8,9 @@ and consist of numerical data. Ensure that any necessary data type casting
 or preprocessing is handled before calling these functions.
 """
 
+from functools import partial
 import jax.numpy as jnp
+import jax
 from jax import jit
 
 
@@ -45,7 +47,7 @@ def manhattan_distance(x: jnp.ndarray, y: jnp.ndarray) -> jnp.ndarray:
     """
     return jnp.sum(jnp.abs(x - y))
 
-@jit
+@partial(jax.jit, static_argnames=["q"])
 def minkowski_distance(x: jnp.ndarray, y: jnp.ndarray, q: int) -> jnp.ndarray:
     """
     Calculates the Minkowski distance between two JAX arrays.
@@ -65,6 +67,6 @@ def minkowski_distance(x: jnp.ndarray, y: jnp.ndarray, q: int) -> jnp.ndarray:
     Exceptions:
         ValueError: If q is not a positive integer.
     """
-    if not isinstance(q, int) or q <= 0:
-        raise ValueError("Minkowski distance expects an order q (integer) greater than 0.")
+    if not isinstance(q, int) or q <=0:
+        raise ValueError(f"Minkowski distance expects an order q (integer) greater than 0. Referenced value is {q}")
     return jnp.power(jnp.sum(jnp.power(jnp.abs(x - y), q)), 1/q)
