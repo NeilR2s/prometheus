@@ -42,7 +42,7 @@ class KNN_Regression:
         elif distance_metric == "manhattan":
             self.distance_metric = manhattan_distance
         elif distance_metric ==  "minkowski":
-            self.distance_metric = lambda minkowski_distance: minkowski_distance(q=minkowski_q)
+            self.distance_metric = lambda x_array_like, y_array_like: minkowski_distance(x_array_like, y_array_like, q=minkowski_q)
 
         else:
             raise ValueError(f"unsupported distance metric {distance_metric}, please choose between euclidean, manhattan, or minkowski")
@@ -115,5 +115,6 @@ class KNN_Regression:
         # print(f"top_k_indices: \n{top_k_indices}")
         top_k_labels = jnp.asarray([self.y_train[i] for i in top_k_indices])
         # print(f"top k labels: \n{top_k_labels}")
+        mean_top_k_labels = jnp.mean(top_k_labels)
 
-        return jnp.mean(top_k_labels)
+        return jnp.mean(mean_top_k_labels)
