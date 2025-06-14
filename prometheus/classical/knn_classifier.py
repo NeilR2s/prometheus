@@ -66,7 +66,7 @@ class KNN_Classifier:
         if self.X_train.ndim == 1:
             self.X_train = self.X_train.reshape(-1,1)
         if X_train_len != y_train_len:
-            raise ValueError(f"ensure that the X and y train values are of the same length, attempted to pass ({X_train_len},{y_train_len})")
+            raise ValueError(f"ensure that the X and y train values are of the same length, attempted to pass arrays of incompatible length ({X_train_len},{y_train_len})")
         if self.k > X_train_len:
             raise ValueError("k must not be greater than the number of training samples")
 

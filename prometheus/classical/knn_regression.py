@@ -1,5 +1,6 @@
 import jax
 import jax.numpy as jnp
+from jax import jit
 from prometheus.utils.distances import manhattan_distance, euclidean_distance, minkowski_distance
 
 # TODO : Implement a label encoder 
@@ -47,7 +48,6 @@ class KNN_Regression:
         else:
             raise ValueError(f"unsupported distance metric {distance_metric}, please choose between euclidean, manhattan, or minkowski")
 
-
     def fit(self, X, y) -> list:
         """
         Stores the training feature data (X) and corresponding labels (y). It casts input X and y into JAX arrays.
@@ -67,7 +67,7 @@ class KNN_Regression:
         if self.X_train.ndim == 1:
             self.X_train.reshape(-1,1)
         if X_train_len != y_train_len:
-            raise ValueError(f"ensure that the X and y train values are of the same length, attempted to pass ({X_train_len},{y_train_len})")
+            raise ValueError(f"ensure that the X and y train values are of the same length, attempted to pass arrays of incompatible length ({X_train_len},{y_train_len})")
         if self.k > X_train_len:
             raise ValueError("k must not be greater than the number of training samples")
 
